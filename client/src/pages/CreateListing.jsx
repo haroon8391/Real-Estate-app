@@ -5,7 +5,7 @@ import {
   ref,
   uploadBytesResumable,
 } from "firebase/storage";
-import app from "../firebase";
+import { app } from "../firebase";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -36,11 +36,22 @@ export default function CreateListing() {
     if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
       setUploading(true);
       setImageUploadError(false);
-      const promises = [];
 
+      // Check file sizes before uploading
+      const oversizedFiles = Array.from(files).filter(
+        (file) => file.size > 2 * 1024 * 1024
+      );
+      if (oversizedFiles.length > 0) {
+        setImageUploadError("One or more files are larger than 2 MB.");
+        setUploading(false);
+        return;
+      }
+
+      const promises = [];
       for (let i = 0; i < files.length; i++) {
         promises.push(storeImage(files[i]));
       }
+
       Promise.all(promises)
         .then((urls) => {
           setFormData({
@@ -51,7 +62,10 @@ export default function CreateListing() {
           setUploading(false);
         })
         .catch((err) => {
-          setImageUploadError("Image upload failed (2 mb max per image)");
+          console.error("Upload Error:", err); // Log the actual error for debugging
+          setImageUploadError(
+            "Image upload failed. Please ensure images are under 2 MB."
+          );
           setUploading(false);
         });
     } else {
